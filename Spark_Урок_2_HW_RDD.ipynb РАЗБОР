@@ -1,0 +1,546 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Spark. Урок 2. HW. RDD",
+      "provenance": [],
+      "collapsed_sections": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Multik838/-Data-analysis-algorithms/blob/main/Spark_%D0%A3%D1%80%D0%BE%D0%BA_2_HW_RDD.ipynb%20%D0%A0%D0%90%D0%97%D0%91%D0%9E%D0%A0\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "8Zc4sdy0s35D"
+      },
+      "source": [
+        "# Создаём точку входа в Spark"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "WjbLSSoGfAM9",
+        "outputId": "b5770f6e-31e2-44ab-bbd0-56e2837cba66"
+      },
+      "source": [
+        "pip install pyspark"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: pyspark in /usr/local/lib/python3.7/dist-packages (3.1.2)\n",
+            "Requirement already satisfied: py4j==0.10.9 in /usr/local/lib/python3.7/dist-packages (from pyspark) (0.10.9)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "PNbgmHoVg7v1",
+        "outputId": "f4bef4f8-dd30-42c1-fb89-65a9bdabb8bc"
+      },
+      "source": [
+        "!lscpu"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Architecture:        x86_64\n",
+            "CPU op-mode(s):      32-bit, 64-bit\n",
+            "Byte Order:          Little Endian\n",
+            "CPU(s):              2\n",
+            "On-line CPU(s) list: 0,1\n",
+            "Thread(s) per core:  2\n",
+            "Core(s) per socket:  1\n",
+            "Socket(s):           1\n",
+            "NUMA node(s):        1\n",
+            "Vendor ID:           GenuineIntel\n",
+            "CPU family:          6\n",
+            "Model:               79\n",
+            "Model name:          Intel(R) Xeon(R) CPU @ 2.20GHz\n",
+            "Stepping:            0\n",
+            "CPU MHz:             2199.998\n",
+            "BogoMIPS:            4399.99\n",
+            "Hypervisor vendor:   KVM\n",
+            "Virtualization type: full\n",
+            "L1d cache:           32K\n",
+            "L1i cache:           32K\n",
+            "L2 cache:            256K\n",
+            "L3 cache:            56320K\n",
+            "NUMA node0 CPU(s):   0,1\n",
+            "Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single ssbd ibrs ibpb stibp fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm rdseed adx smap xsaveopt arat md_clear arch_capabilities\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "idrMQH4dj605"
+      },
+      "source": [
+        "from pyspark.sql import SparkSession\n",
+        " \n",
+        "spark = SparkSession.builder\\\n",
+        "        .master('local[2]')\\\n",
+        "        .appName('Lesson_2')\\\n",
+        "        .config('spark.ui.port', '4050')\\\n",
+        "        .config('spark.executor.instances', 1)\\\n",
+        "        .config('spark.executor.memory', f'{int(4000/1.1)}mb')\\  # '4g')\\\n",
+        "        .config('spark.executor.cores', 2)\\\n",
+        "        .getOrCreate()\n",
+        " \n",
+        "sc = spark.sparkContext\n",
+        " \n",
+        " \n",
+        "# Вспомогательная функция\n",
+        " \n",
+        "def beautiful_print(rdd, num, title):\n",
+        "    print(title)\n",
+        "    for row in rdd.take(num):\n",
+        "        print('\\t', row)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "VrBE3PdXtOwT"
+      },
+      "source": [
+        "# Самостоятельная работа\n",
+        "\n",
+        "Требуется выяснить:\n",
+        "1. Какое соотношение сторон экрана телефона самое популярное,\n",
+        "2. Плотность пикселей у экрана.\n",
+        "\n",
+        "Можно использовать только rdd.\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "nMBh96HE20UT"
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "FjAfrNtXSKBz"
+      },
+      "source": [
+        "## Считывание данных\n",
+        "Данные взяты отсюда: https://www.kaggle.com/iabhishekofficial/mobile-price-classification\n",
+        "Скачиваем и копируем в папку с нотебуком\n",
+        "\n",
+        "Внутри содержится следующая информация:\n",
+        "\n",
+        "* id: ID\n",
+        "* battery_power: Total energy a battery can store in one time (mAh)\n",
+        "* blue: Support bluetooth or not\n",
+        "* clock_speed: Speed at which microprocessor executes instructions\n",
+        "* dual_sim: Support dual sim or not\n",
+        "* fc: Front Camera mega pixels\n",
+        "* four_g: Support 4G or not\n",
+        "* int_memory: Internal Memory (GB)\n",
+        "* m_dep: Mobile Depth (cm)\n",
+        "* mobile_wt: Weight of mobile phone\n",
+        "* n_cores: Number of cores of processor\n",
+        "* pc: Primary Camera mega pixels\n",
+        "* px_height: Pixel Resolution Height\n",
+        "* px_width: Pixel Resolution Width\n",
+        "* ram: Random Access Memory (MB)\n",
+        "* sc_h: Screen Height of mobile (cm)\n",
+        "* sc_w: Screen Width of mobile (cm)\n",
+        "* talk_time: Time that a single battery charge will last\n",
+        "* three_g: Support 3G or not\n",
+        "* touch_screen: Has touch screen or not\n",
+        "* wifi: Support wifi or not"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "3VyKjYOSkLlp",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "99952d47-8983-47ee-b162-fe2244b9b841"
+      },
+      "source": [
+        "train = sc.textFile('/content/train.csv')\n",
+        "beautiful_print(train, 3, 'Train:')\n",
+        "train_first_row = train.first()\n",
+        "print(f\"Train size: {train.count()} x {len(train_first_row.split(','))}\")"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Train:\n",
+            "\t battery_power,blue,clock_speed,dual_sim,fc,four_g,int_memory,m_dep,mobile_wt,n_cores,pc,px_height,px_width,ram,sc_h,sc_w,talk_time,three_g,touch_screen,wifi,price_range\n",
+            "\t 842,0,2.2,0,1,0,7,0.6,188,2,2,20,756,2549,9,7,19,0,0,1,1\n",
+            "\t 1021,1,0.5,1,0,1,53,0.7,136,3,6,905,1988,2631,17,3,7,1,1,0,2\n",
+            "Train size: 2001 x 21\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "CSZJ2D5EuErD",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "01af71ca-fa00-4c64-8570-4d93b77550fa"
+      },
+      "source": [
+        "# Задание 1\n",
+        "#  Считайте test.csv и отобразите первые 5 строк\n",
+        "test = sc.textFile('/content/test.csv')\n",
+        "beautiful_print(test, 6, 'Test:')\n",
+        "test_first_row = test.first()\n",
+        "print(f\"Test size: {test.count()} x {len(test_first_row.split(','))}\")\n",
+        " # 5 строк кроме заголовка"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Test:\n",
+            "\t id,battery_power,blue,clock_speed,dual_sim,fc,four_g,int_memory,m_dep,mobile_wt,n_cores,pc,px_height,px_width,ram,sc_h,sc_w,talk_time,three_g,touch_screen,wifi\n",
+            "\t 1,1043,1,1.8,1,14,0,5,0.1,193,3,16,226,1412,3476,12,7,2,0,1,0\n",
+            "\t 2,841,1,0.5,1,4,1,61,0.8,191,5,12,746,857,3895,6,0,7,1,0,0\n",
+            "\t 3,1807,1,2.8,0,1,0,27,0.9,186,3,4,1270,1366,2396,17,10,10,0,1,1\n",
+            "\t 4,1546,0,0.5,1,18,1,25,0.5,96,8,20,295,1752,3893,10,0,7,1,1,0\n",
+            "\t 5,1434,0,1.4,0,11,1,49,0.5,108,6,18,749,810,1773,15,8,7,1,0,1\n",
+            "Test size: 1001 x 21\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "5pNi9czovHNh"
+      },
+      "source": [
+        "##  Преобразуем train и test"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "fiA-_A4cueiI",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "585fb319-587a-414a-d814-52762a53c3d6"
+      },
+      "source": [
+        "train = train\\\n",
+        "    .filter(lambda row: row != train_first_row)\\\n",
+        "    .map(lambda row: [float(el) for el in row.split(',')])\n",
+        "    \n",
+        "train_header = train_first_row.split(',')\n",
+        "beautiful_print(train, 3, train_header)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "['battery_power', 'blue', 'clock_speed', 'dual_sim', 'fc', 'four_g', 'int_memory', 'm_dep', 'mobile_wt', 'n_cores', 'pc', 'px_height', 'px_width', 'ram', 'sc_h', 'sc_w', 'talk_time', 'three_g', 'touch_screen', 'wifi', 'price_range']\n",
+            "\t [842.0, 0.0, 2.2, 0.0, 1.0, 0.0, 7.0, 0.6, 188.0, 2.0, 2.0, 20.0, 756.0, 2549.0, 9.0, 7.0, 19.0, 0.0, 0.0, 1.0, 1.0]\n",
+            "\t [1021.0, 1.0, 0.5, 1.0, 0.0, 1.0, 53.0, 0.7, 136.0, 3.0, 6.0, 905.0, 1988.0, 2631.0, 17.0, 3.0, 7.0, 1.0, 1.0, 0.0, 2.0]\n",
+            "\t [563.0, 1.0, 0.5, 1.0, 2.0, 1.0, 41.0, 0.9, 145.0, 5.0, 6.0, 1263.0, 1716.0, 2603.0, 11.0, 2.0, 9.0, 1.0, 1.0, 0.0, 2.0]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ha-Yw8v8MmLR",
+        "outputId": "5bf179a6-c5a5-4b60-82bc-fb57b2d5db0c"
+      },
+      "source": [
+        "# удаляю колонку 'price_range' для дальнейшего объединения с 'test'\n",
+        "train = train\\\n",
+        "    .map(lambda row: row[:-1])\n",
+        "    \n",
+        "train_header = train_header[:-1]\n",
+        "beautiful_print(train, 3, train_header)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "['battery_power', 'blue', 'clock_speed', 'dual_sim', 'fc', 'four_g', 'int_memory', 'm_dep', 'mobile_wt', 'n_cores', 'pc', 'px_height', 'px_width', 'ram', 'sc_h', 'sc_w', 'talk_time', 'three_g', 'touch_screen', 'wifi']\n",
+            "\t [842.0, 0.0, 2.2, 0.0, 1.0, 0.0, 7.0, 0.6, 188.0, 2.0, 2.0, 20.0, 756.0, 2549.0, 9.0, 7.0, 19.0, 0.0, 0.0, 1.0]\n",
+            "\t [1021.0, 1.0, 0.5, 1.0, 0.0, 1.0, 53.0, 0.7, 136.0, 3.0, 6.0, 905.0, 1988.0, 2631.0, 17.0, 3.0, 7.0, 1.0, 1.0, 0.0]\n",
+            "\t [563.0, 1.0, 0.5, 1.0, 2.0, 1.0, 41.0, 0.9, 145.0, 5.0, 6.0, 1263.0, 1716.0, 2603.0, 11.0, 2.0, 9.0, 1.0, 1.0, 0.0]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "eXdImLV9rGSW",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "c67ecb5a-d2bd-4256-a4e9-382ec173fbef"
+      },
+      "source": [
+        "# Задание 2\n",
+        "#  Приведите test.csv к аналогичному виду, что и train\n",
+        "test = test\\\n",
+        "    .filter(lambda row: row != test_first_row)\\\n",
+        "    .map(lambda row: [float(el) for el in row.split(',')])\n",
+        "    \n",
+        "test_header = test_first_row.split(',')\n",
+        "beautiful_print(test, 3, test_header)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "['id', 'battery_power', 'blue', 'clock_speed', 'dual_sim', 'fc', 'four_g', 'int_memory', 'm_dep', 'mobile_wt', 'n_cores', 'pc', 'px_height', 'px_width', 'ram', 'sc_h', 'sc_w', 'talk_time', 'three_g', 'touch_screen', 'wifi']\n",
+            "\t [1.0, 1043.0, 1.0, 1.8, 1.0, 14.0, 0.0, 5.0, 0.1, 193.0, 3.0, 16.0, 226.0, 1412.0, 3476.0, 12.0, 7.0, 2.0, 0.0, 1.0, 0.0]\n",
+            "\t [2.0, 841.0, 1.0, 0.5, 1.0, 4.0, 1.0, 61.0, 0.8, 191.0, 5.0, 12.0, 746.0, 857.0, 3895.0, 6.0, 0.0, 7.0, 1.0, 0.0, 0.0]\n",
+            "\t [3.0, 1807.0, 1.0, 2.8, 0.0, 1.0, 0.0, 27.0, 0.9, 186.0, 3.0, 4.0, 1270.0, 1366.0, 2396.0, 17.0, 10.0, 10.0, 0.0, 1.0, 1.0]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "mmiM30J4PUQm",
+        "outputId": "0c38d21b-f1b3-4fd1-89e3-98825d2476f5"
+      },
+      "source": [
+        "# удаляю колонку 'id' для дальнейшего объединения с 'train'\n",
+        "test = test\\\n",
+        "    .map(lambda row: row[1:])\n",
+        "    \n",
+        "test_header = test_header[1:]\n",
+        "beautiful_print(test, 3, test_header)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "['battery_power', 'blue', 'clock_speed', 'dual_sim', 'fc', 'four_g', 'int_memory', 'm_dep', 'mobile_wt', 'n_cores', 'pc', 'px_height', 'px_width', 'ram', 'sc_h', 'sc_w', 'talk_time', 'three_g', 'touch_screen', 'wifi']\n",
+            "\t [1043.0, 1.0, 1.8, 1.0, 14.0, 0.0, 5.0, 0.1, 193.0, 3.0, 16.0, 226.0, 1412.0, 3476.0, 12.0, 7.0, 2.0, 0.0, 1.0, 0.0]\n",
+            "\t [841.0, 1.0, 0.5, 1.0, 4.0, 1.0, 61.0, 0.8, 191.0, 5.0, 12.0, 746.0, 857.0, 3895.0, 6.0, 0.0, 7.0, 1.0, 0.0, 0.0]\n",
+            "\t [1807.0, 1.0, 2.8, 0.0, 1.0, 0.0, 27.0, 0.9, 186.0, 3.0, 4.0, 1270.0, 1366.0, 2396.0, 17.0, 10.0, 10.0, 0.0, 1.0, 1.0]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "kjCdeAS4v1Vc"
+      },
+      "source": [
+        "## Объединим train и test\n",
+        "Найти нужную функцию можно [здесь](https://spark.apache.org/docs/3.1.1/api/python/reference/pyspark.html#rdd-apis)\n",
+        "\n",
+        "PS: нужно сделать средсвтвами rdd pd.concat([train, test,], axis=0)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "RA3a_xqfQg2s",
+        "outputId": "f4386e9a-f7fe-4004-8f74-a54806a94ad6"
+      },
+      "source": [
+        "print(f\"Train size: {train.count()} x {len(train_header)}\")\n",
+        "print(f\"Test size: {test.count()} x {len(test_header)}\")"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Train size: 2000 x 20\n",
+            "Test size: 1000 x 20\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "AKfK55sLuuAT"
+      },
+      "source": [
+        "# Задание 3\n",
+        "#  Объедините данные\n",
+        "union_header = test_header\n",
+        "union = test.union(train)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "wEzr4nN-KVH0",
+        "outputId": "8733b19f-b963-4924-d83e-e29d166d9a6d"
+      },
+      "source": [
+        "beautiful_print(union, 3, union_header)\n",
+        "print(f\"Test size: {union.count()} x {len(union_header)}\")"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "['battery_power', 'blue', 'clock_speed', 'dual_sim', 'fc', 'four_g', 'int_memory', 'm_dep', 'mobile_wt', 'n_cores', 'pc', 'px_height', 'px_width', 'ram', 'sc_h', 'sc_w', 'talk_time', 'three_g', 'touch_screen', 'wifi']\n",
+            "\t [1043.0, 1.0, 1.8, 1.0, 14.0, 0.0, 5.0, 0.1, 193.0, 3.0, 16.0, 226.0, 1412.0, 3476.0, 12.0, 7.0, 2.0, 0.0, 1.0, 0.0]\n",
+            "\t [841.0, 1.0, 0.5, 1.0, 4.0, 1.0, 61.0, 0.8, 191.0, 5.0, 12.0, 746.0, 857.0, 3895.0, 6.0, 0.0, 7.0, 1.0, 0.0, 0.0]\n",
+            "\t [1807.0, 1.0, 2.8, 0.0, 1.0, 0.0, 27.0, 0.9, 186.0, 3.0, 4.0, 1270.0, 1366.0, 2396.0, 17.0, 10.0, 10.0, 0.0, 1.0, 1.0]\n",
+            "Test size: 3000 x 20\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "GxGGHqRyx7XG"
+      },
+      "source": [
+        "## Рассчитайте соотношение сторон экрана и его плотность пикселей"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HckZvR72xs7W"
+      },
+      "source": [
+        "# Задание 4\n",
+        "#  Рассчитайте соотношение сторон экрана и найдите широкоформатные, выведите это распределение"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "AlaMbUMwvGsp"
+      },
+      "source": [
+        "# Задание 5\n",
+        "#  Рассчитайте плотность пикселей (лучше ppi), выведите это распределение"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "PNAGeyOmzEN4"
+      },
+      "source": [
+        "# JOIN\n",
+        "Повторите вышеописанное задание с помощью одной из функций ниже (отдельно рассчитайте для train и test, затем объедините результат)\n",
+        "\n",
+        "Пример для двух RDDs: (rdd = {(1, 2), (3, 4), (3, 6)} other = {(3, 9)})\n",
+        "\n",
+        "Имя функции |\tPurpose |\tExample |\tResult\n",
+        "------------- |\t------- |\t------- |\t------\n",
+        "subtractByKey |Remove elements with a key present in the other RDD.| rdd.subtractByKey(other) | {(1, 2)}\n",
+        "join | Perform an inner join between two RDDs. | rdd.join(other) | {(3, (4, 9)), (3, (6, 9))}\n",
+        "rightOuterJoin | Perform a join between two RDDs where the key must be present in the first RDD. | rdd.rightOuterJoin(other) | {(3,(Some(4),9)), (3,(Some(6),9))}leftOuterJoin | Perform a join between two RDDs where the key must be present in the other RDD. | rdd.\n",
+        "leftOuterJoin(other) | {(1,(2,None)), (3,(4,Some(9))), (3,(6,Some(9)))}\n",
+        "cogroup | Group data from both RDDs sharing the same key. | rdd.cogroup(other) | {(1,([2],[])), (3,([4, 6],[9]))}\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "kRb1q9QizDiH"
+      },
+      "source": [
+        "# Задание 6\n",
+        "#  Рассчитайте для train и test, затем объедините результат"
+      ],
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
